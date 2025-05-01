@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polskie Klipy Twitcha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        header {
+            background-color: #6441a5;
+            padding: 10px 20px;
+            color: white;
+            text-align: center;
+        }
+        #filters {
+            margin: 20px;
+            text-align: center;
+        }
+        #filters select, #filters button {
+            padding: 10px;
+            margin: 5px;
+        }
+        .clip {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px;
+            background-color: white;
+        }
+        .clip img {
+            width: 100%;
+            height: auto;
+        }
+        .clip h3 {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+        .clip a {
+            text-decoration: none;
+            color: #6441a5;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Polskie Klipy z Twitcha</h1>
+    </header>
+
+    <div id="filters">
+        <select id="time-period">
+            <option value="24">Ostatnie 24 godziny</option>
+            <option value="168">Ostatni tydzień</option>
+            <option value="720">Ostatni miesiąc</option>
+        </select>
+        <button id="load-clips">Załaduj Klipy</button>
+    </div>
+
+    <div id="clips-container"></div>
+
+    <script>
+        const clientId = "YOUR_CLIENT_ID";  // Zastąp tym, co otrzymałeś z Twitcha
+        const accessToken = "YOUR_ACCESS_TOKEN";  // Zastąp tym, co otrzymałeś z Twitcha
+
+        // Funkcja do pobierania klipów z Twitcha
+        async function fetchClips(timePeriod) {
+            const now = Date.now();
+            const timeRange = now - (timePeriod * 60 * 60 * 1000); // Konwertujemy na milisekundy
+            const apiUrl = `https://api.twitch.tv/helix/clips?first=100&started_at=${new Date(timeRange).toISOString()}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Client-ID': clientId,
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.data && data.data.length > 0) {
+                    // Filtrowanie klipów po języku polskim
+                    const filteredClips = data.data.filter(clip => clip.language === 'pl');
+                    filteredClips.sort((a, b) => b.view_count - a.view_count); // Sortowanie według liczby wyświetleń
+                    displayClips(filteredClips);
+                } else {
+                    alert('Brak klipów dla wybranego okresu!');
+                }
+            } catch (error) {
+                console.error('Wystąpił błąd:', error);
+                alert('Błąd podczas ładowania klipów. Spróbuj ponownie.');
+            }
+        }
+
+        // Funkcja do wyświetlania klipów na stronie
+        function displayClips(clips) {
+            const container = document.getElementById('clips-container');
+            container.innerHTML = '';  // Czyścimy poprzednie wyniki
+
+            if (clips.length === 0) {
+                container.innerHTML = "Brak klipów w języku polskim.";
+                return;
+            }
+
+            clips.forEach(clip => {
+                const clipElement = document.createElement('div');
+                clipElement.classList.add('clip');
+                clipElement.innerHTML = `
+                    <h3><a href="${clip.url}" target="_blank">${clip.title}</a></h3>
+                    <p>Wyświetlenia: ${clip.view_count}</p>
+                    <img src="${clip.thumbnail_url.replace('{width}', '320').replace('{height}', '180')}" alt="${clip.title}" />
+                `;
+                container.appendChild(clipElement);
+            });
+        }
+
+        // Obsługa kliknięcia w przycisk "Załaduj Klipy"
+        document.getElementById('load-clips').addEventListener('click', function() {
+            const timePeriod = document.getElementById('time-period').value;
+            fetchClips(timePeriod);
+        });
+
+        // Początkowe załadowanie klipów z ostatnich 24 godzin
+        fetchClips(24);
+    </script>
+</body>
+</html>
